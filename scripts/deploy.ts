@@ -2,11 +2,12 @@ import hre from "hardhat";
 import { parseEther } from "viem";
 
 async function main() {
-    const [deployer] = await hre.viem.getWalletClients();
+    const { viem } = await hre.network.connect();
+    const [deployer] = await viem.getWalletClients();
     console.log(`Deploying BBX contract with account: ${deployer.account.address}`);
 
     // Deploy
-    const bbx = await hre.viem.deployContract("BBX", [deployer.account.address, deployer.account.address]);
+    const bbx = await viem.deployContract("BBX", [deployer.account.address, deployer.account.address]);
     console.log(`BBX deployed to: ${bbx.address}`);
 
     // --- Dev Fund Setup (5% Vested) ---
@@ -14,8 +15,9 @@ async function main() {
     const devFundAmount = parseEther("50000000");
 
     console.log("Deploying VestingWallet for Dev Fund...");
-    const currentBlock = await hre.network.provider.send("eth_getBlockByNumber", ["latest", false]);
-    const cleanTimestamp = BigInt(currentBlock.timestamp); // Current block timestamp
+    const publicClient = await viem.getPublicClient();
+    const currentBlock = await publicClient.getBlock();
+    const cleanTimestamp = currentBlock.timestamp; // Current block timestamp
     const duration = 2 * 365 * 24 * 60 * 60; // 2 Years in seconds
 
     // VestingWallet constructor: (beneficiary, startTimestamp, durationSeconds)
@@ -31,7 +33,7 @@ async function main() {
     // HOLD UP: modifying this script relies on VestingWallet being available. 
     // I will write the contract file in the next step, then this script will work.
 
-    const vesting = await hre.viem.deployContract("DevVestingWallet", [
+    const vesting = await viem.deployContract("DevVestingWallet", [
         deployer.account.address, // Beneficiary (You)
         cleanTimestamp,           // Start (Now)
         BigInt(duration)          // Duration (2 Years)

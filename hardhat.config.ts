@@ -1,7 +1,9 @@
-import "@nomicfoundation/hardhat-toolbox-viem";
-import { HardhatUserConfig, vars } from "hardhat/config";
+import hardhatToolboxViemPlugin from "@nomicfoundation/hardhat-toolbox-viem";
+import { defineConfig } from "hardhat/config";
+import "dotenv/config";
 
-const config: HardhatUserConfig = {
+export default defineConfig({
+  plugins: [hardhatToolboxViemPlugin],
   solidity: {
     profiles: {
       default: {
@@ -30,13 +32,13 @@ const config: HardhatUserConfig = {
     sepolia: {
       type: "http",
       chainType: "l1",
-      url: configVariable("SEPOLIA_RPC_URL"),
-      accounts: [configVariable("SEPOLIA_PRIVATE_KEY")],
+      url: process.env.SEPOLIA_RPC_URL || "https://sepolia.example.com",
+      accounts: process.env.SEPOLIA_PRIVATE_KEY ? [process.env.SEPOLIA_PRIVATE_KEY] : [],
     },
     arbitrumSepolia: {
       type: "http",
-      url: configVariable("ARBITRUM_SEPOLIA_RPC_URL"),
-      accounts: [configVariable("PRIVATE_KEY")],
+      url: process.env.ARBITRUM_SEPOLIA_RPC_URL || "https://arbitrum-sepolia.example.com",
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
       chainId: 421614,
     },
   },
