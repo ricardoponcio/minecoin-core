@@ -5,6 +5,7 @@ import * as dotenv from "dotenv";
 
 dotenv.config();
 
+// npx hardhat run scripts/deploy.ts --network amoy
 async function main() {
     // Casting 'as any' para evitar erro de TS
     const publicClient = await (hre as any).viem.getPublicClient();
