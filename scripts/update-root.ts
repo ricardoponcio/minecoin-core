@@ -4,10 +4,10 @@ dotenv.config();
 
 // npx hardhat run scripts/update-root.ts --network amoy
 async function main() {
-    const CONTRACT_ADDRESS = "0xff41c8eee488accd9073f94cdee57abe596fea68";
+    const CONTRACT_ADDRESS = "0xd2b42d3ef9aa08fc6d27dbba29a972e25c77cf24";
 
     // COLE AQUI O NOVO ROOT GERADO PELO JAVA/TYPESCRIPT
-    const NEW_MERKLE_ROOT = "0x3b0111994365939656a30cfe493137f19a6362fa8b342a76d3a820ce2a57e6a1";
+    const NEW_MERKLE_ROOT = "0xc28898a20a8e2bd61700aa3f42e71e138df9acabe5d365d8f4becbdbc4a412e9";
 
     const [deployer] = await (hre as any).viem.getWalletClients();
     const publicClient = await (hre as any).viem.getPublicClient();

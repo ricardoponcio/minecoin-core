@@ -132,6 +132,24 @@ contract BBX is
         emit Claimed(msg.sender, toMint);
     }
 
+    /**
+     * @dev Envia tokens para vários endereços em uma única transação.
+     * Útil para economizar gás em distribuições em massa.
+     */
+    function batchMint(
+        address[] calldata recipients,
+        uint256[] calldata amounts
+    ) external onlyRole(MINTER_ROLE) {
+        require(
+            recipients.length == amounts.length,
+            "Arrays com tamanhos diferentes"
+        );
+
+        for (uint256 i = 0; i < recipients.length; i++) {
+            _mint(recipients[i], amounts[i]);
+        }
+    }
+
     // The following functions are overrides required by Solidity.
 
     function _update(
