@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol";
+import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
 contract BBX is
     ERC20,
@@ -20,6 +21,15 @@ contract BBX is
 {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+    bytes32 public constant MERKLE_UPDATER_ROLE =
+        keccak256("MERKLE_UPDATER_ROLE");
+
+    // --- Merkle Drop State ---
+    bytes32 public merkleRoot;
+    mapping(address => uint256) public claimedAmount;
+
+    event MerkleRootUpdated(bytes32 indexed newRoot);
+    event Claimed(address indexed user, uint256 amount);
 
     // --- Mint Limiter State ---
     uint256 public mintCapPerPeriod; // Max amount allowed to mint per period
@@ -33,6 +43,8 @@ contract BBX is
 
     error MintLimitExceeded(uint256 requested, uint256 available);
     error MaxWalletExceeded(uint256 balance, uint256 limit);
+    error InvalidProof();
+    error NothingToClaim();
 
     constructor(
         address defaultAdmin,
@@ -45,6 +57,7 @@ contract BBX is
         _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
         _grantRole(MINTER_ROLE, minter);
         _grantRole(PAUSER_ROLE, defaultAdmin);
+        _grantRole(MERKLE_UPDATER_ROLE, defaultAdmin);
 
         // Define Mint Rate Limit: 10% of Total Cap per 24h
         mintCapPerPeriod = (cap() * 10) / 100;
@@ -90,6 +103,32 @@ contract BBX is
         // --------------------------
 
         _mint(to, amount);
+    }
+
+    // --- Merkle Drop Logic ---
+
+    function updateMerkleRoot(
+        bytes32 _merkleRoot
+    ) public onlyRole(MERKLE_UPDATER_ROLE) {
+        merkleRoot = _merkleRoot;
+        emit MerkleRootUpdated(_merkleRoot);
+    }
+
+    function claim(uint256 totalAllocation, bytes32[] calldata proof) public {
+        if (totalAllocation <= claimedAmount[msg.sender]) {
+            revert NothingToClaim();
+        }
+
+        bytes32 leaf = keccak256(abi.encodePacked(msg.sender, totalAllocation));
+        if (!MerkleProof.verify(proof, merkleRoot, leaf)) {
+            revert InvalidProof();
+        }
+
+        uint256 toMint = totalAllocation - claimedAmount[msg.sender];
+        claimedAmount[msg.sender] = totalAllocation;
+
+        _mint(msg.sender, toMint);
+        emit Claimed(msg.sender, toMint);
     }
 
     // The following functions are overrides required by Solidity.
