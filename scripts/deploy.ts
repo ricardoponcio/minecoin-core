@@ -5,6 +5,7 @@ import * as dotenv from "dotenv";
 
 dotenv.config();
 
+// npx hardhat compile
 // npx hardhat run scripts/deploy.ts --network amoy
 async function main() {
     // Casting 'as any' para evitar erro de TS

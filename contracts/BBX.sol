@@ -133,26 +133,28 @@ contract BBX is
     }
 
     /**
-     * @dev Envia tokens para vários endereços em uma única transação.
-     * Útil para economizar gás em distribuições em massa.
+     * @notice Distribui tokens baseado no TOTAL acumulado (Snapshot).
+     * @dev Calcula a diferença entre o total e o que já foi sacado.
+     * Evita pagamentos duplicados (Idempotência).
      */
     function batchMint(
         address[] calldata recipients,
-        uint256[] calldata amounts
+        uint256[] calldata totalAllocations
     ) external onlyRole(MINTER_ROLE) {
         require(
-            recipients.length == amounts.length,
-            "Arrays com tamanhos diferentes"
+            recipients.length == totalAllocations.length,
+            "Arrays length mismatch"
         );
 
         for (uint256 i = 0; i < recipients.length; i++) {
-            address recipient = recipients[i];
-            uint256 amount = amounts[i];
+            address user = recipients[i];
+            uint256 total = totalAllocations[i];
 
-            // Sincroniza com o sistema de Merkle Claim
-            claimedAmount[recipient] += amount;
-
-            _mint(recipient, amount);
+            if (total > claimedAmount[user]) {
+                uint256 toMint = total - claimedAmount[user];
+                claimedAmount[user] = total;
+                _mint(user, toMint);
+            }
         }
     }
 
