@@ -4,7 +4,7 @@ dotenv.config();
 
 // npx hardhat run scripts/update-root.ts --network amoy
 async function main() {
-    const CONTRACT_ADDRESS = "0xd2b42d3ef9aa08fc6d27dbba29a972e25c77cf24";
+    const CONTRACT_ADDRESS = "0x6ce1e1d74f4592e1d11ebb05cfd50be0830ef9a8";
 
     // COLE AQUI O NOVO ROOT GERADO PELO JAVA/TYPESCRIPT
     const NEW_MERKLE_ROOT = "0xc28898a20a8e2bd61700aa3f42e71e138df9acabe5d365d8f4becbdbc4a412e9";
