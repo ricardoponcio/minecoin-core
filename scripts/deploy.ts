@@ -1,33 +1,26 @@
 import hre from "hardhat";
 import "@nomicfoundation/hardhat-viem";
 import { parseEther, keccak256, toHex } from "viem";
-import * as dotenv from "dotenv"; // Importante para ler o .env no script também
+import * as dotenv from "dotenv";
 
 dotenv.config();
 
-
-// npx hardhat run scripts/deploy.ts --network amoy
 async function main() {
-    // Casting 'as any' para o TypeScript não encher o saco
+    // Casting 'as any' para evitar erro de TS
     const publicClient = await (hre as any).viem.getPublicClient();
     const [deployer] = await (hre as any).viem.getWalletClients();
 
     if (!deployer) {
-        throw new Error("❌ ERRO: Nenhuma conta encontrada. Verifique se a PRIVATE_KEY está no arquivo .env");
+        throw new Error("❌ ERRO: Nenhuma conta encontrada. Verifique o .env");
     }
 
     console.log(`🚀 Iniciando Deploy com a conta OWNER: ${deployer.account.address}`);
 
-    // --- LÓGICA SEM HARDCODE ---
-    // Tenta pegar do .env. Se não tiver, usa o próprio dono (para testes)
+    // --- CONFIGURAÇÃO DO BOT ---
     let botAddress = deployer.account.address;
-
     if (process.env.BOT_ADDRESS && process.env.BOT_ADDRESS.startsWith("0x")) {
         botAddress = process.env.BOT_ADDRESS as `0x${string}`;
-    } else {
-        console.warn("⚠️ AVISO: BOT_ADDRESS não encontrado no .env. Usando o deployer como bot.");
     }
-
     console.log(`🤖 Endereço do Bot (Minter/Updater): ${botAddress}`);
 
     // 1. Deploy do Token BBX
@@ -38,10 +31,10 @@ async function main() {
     console.log(`✅ BBX Token deployado em: ${bbx.address}`);
 
     // 2. Setup do Vesting
-    const devFundAmount = parseEther("50000000");
+    const devFundAmount = parseEther("50000000"); // 50 Milhões
     const currentBlock = await publicClient.getBlock();
     const cleanTimestamp = currentBlock.timestamp;
-    const duration = BigInt(2 * 365 * 24 * 60 * 60);
+    const duration = BigInt(2 * 365 * 24 * 60 * 60); // 2 Anos
 
     console.log("⏳ Deployando VestingWallet...");
     const vesting = await (hre as any).viem.deployContract("DevVestingWallet", [
@@ -51,12 +44,17 @@ async function main() {
     ]);
     console.log(`🏦 Carteira de Vesting: ${vesting.address}`);
 
-    // 3. Excluir Vesting do limite
+    // 3. Excluir Vesting do limite (COM WAIT)
     try {
         console.log("🔓 Excluindo Vesting do Max Wallet Limit...");
-        await bbx.write.setExcludedFromLimit([vesting.address, true]);
+        const hashExclusion = await bbx.write.setExcludedFromLimit([vesting.address, true]);
+
+        // AQUI ESTÁ A CORREÇÃO: Esperamos a blockchain confirmar antes de continuar
+        await publicClient.waitForTransactionReceipt({ hash: hashExclusion });
+        console.log("✅ Confirmação recebida: Vesting excluído do limite.");
+
     } catch (e) {
-        console.log("⚠️ Ignorado: setExcludedFromLimit falhou ou não existe.");
+        console.log("⚠️ Erro ao excluir do limite (pode falhar se o mint ocorrer antes):", e);
     }
 
     // 4. MINT DO FUNDO DE DEV 
@@ -64,21 +62,29 @@ async function main() {
     const MINTER_ROLE = keccak256(toHex("MINTER_ROLE"));
     const isBotDifferent = botAddress.toLowerCase() !== deployer.account.address.toLowerCase();
 
+    // Se precisar dar permissão temporária
     if (isBotDifferent) {
-        console.log("⚠️ Deployer não é o Minter. Concedendo permissão temporária...");
-        await bbx.write.grantRole([MINTER_ROLE, deployer.account.address]);
+        console.log("⚠️ Concedendo permissão temporária de Minter...");
+        const hashGrant = await bbx.write.grantRole([MINTER_ROLE, deployer.account.address]);
+        await publicClient.waitForTransactionReceipt({ hash: hashGrant }); // Wait
+        console.log("✅ Permissão concedida.");
     }
 
     console.log("💸 Mintando 5% para o Vesting...");
-    await bbx.write.mint([vesting.address, devFundAmount]);
+    // Agora é seguro mintar, pois a exclusão do limite JÁ FOI confirmada
+    const hashMint = await bbx.write.mint([vesting.address, devFundAmount]);
+    await publicClient.waitForTransactionReceipt({ hash: hashMint }); // Wait
+    console.log("✅ Mint confirmado.");
 
+    // Revoga permissão
     if (isBotDifferent) {
         console.log("🔒 Revogando permissão temporária...");
-        await bbx.write.revokeRole([MINTER_ROLE, deployer.account.address]);
+        const hashRevoke = await bbx.write.revokeRole([MINTER_ROLE, deployer.account.address]);
+        await publicClient.waitForTransactionReceipt({ hash: hashRevoke }); // Wait
     }
 
     console.log("----------------------------------------------------");
-    console.log("🎉 DEPLOY FINALIZADO!");
+    console.log("🎉 DEPLOY FINALIZADO COM SUCESSO!");
     console.log(`Token:   ${bbx.address}`);
     console.log(`Vesting: ${vesting.address}`);
     console.log("----------------------------------------------------");
