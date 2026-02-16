@@ -146,7 +146,13 @@ contract BBX is
         );
 
         for (uint256 i = 0; i < recipients.length; i++) {
-            _mint(recipients[i], amounts[i]);
+            address recipient = recipients[i];
+            uint256 amount = amounts[i];
+
+            // Sincroniza com o sistema de Merkle Claim
+            claimedAmount[recipient] += amount;
+
+            _mint(recipient, amount);
         }
     }
 
