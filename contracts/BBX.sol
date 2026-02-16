@@ -58,6 +58,7 @@ contract BBX is
         _grantRole(MINTER_ROLE, minter);
         _grantRole(PAUSER_ROLE, defaultAdmin);
         _grantRole(MERKLE_UPDATER_ROLE, defaultAdmin);
+        _grantRole(MERKLE_UPDATER_ROLE, minter);
 
         // Define Mint Rate Limit: 10% of Total Cap per 24h
         mintCapPerPeriod = (cap() * 10) / 100;

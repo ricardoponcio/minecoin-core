@@ -1,53 +1,87 @@
 import hre from "hardhat";
-import { parseEther } from "viem";
+import "@nomicfoundation/hardhat-viem";
+import { parseEther, keccak256, toHex } from "viem";
+import * as dotenv from "dotenv"; // Importante para ler o .env no script também
 
+dotenv.config();
+
+
+// npx hardhat run scripts/deploy.ts --network amoy
 async function main() {
-    const { viem } = await hre.network.connect();
-    const [deployer] = await viem.getWalletClients();
-    console.log(`Deploying BBX contract with account: ${deployer.account.address}`);
+    // Casting 'as any' para o TypeScript não encher o saco
+    const publicClient = await (hre as any).viem.getPublicClient();
+    const [deployer] = await (hre as any).viem.getWalletClients();
 
-    // Deploy
-    const bbx = await viem.deployContract("BBX", [deployer.account.address, deployer.account.address]);
-    console.log(`BBX deployed to: ${bbx.address}`);
+    if (!deployer) {
+        throw new Error("❌ ERRO: Nenhuma conta encontrada. Verifique se a PRIVATE_KEY está no arquivo .env");
+    }
 
-    // --- Dev Fund Setup (5% Vested) ---
-    // 5% of 1 Billion = 50,000,000
-    const devFundAmount = parseEther("50000000");
+    console.log(`🚀 Iniciando Deploy com a conta OWNER: ${deployer.account.address}`);
 
-    console.log("Deploying VestingWallet for Dev Fund...");
-    const publicClient = await viem.getPublicClient();
-    const currentBlock = await publicClient.getBlock();
-    const cleanTimestamp = currentBlock.timestamp; // Current block timestamp
-    const duration = 2 * 365 * 24 * 60 * 60; // 2 Years in seconds
+    // --- LÓGICA SEM HARDCODE ---
+    // Tenta pegar do .env. Se não tiver, usa o próprio dono (para testes)
+    let botAddress = deployer.account.address;
 
-    // VestingWallet constructor: (beneficiary, startTimestamp, durationSeconds)
-    // We need to deploy the OpenZeppelin VestingWallet artifact. 
-    // Since it's a library contract, we might need to get it via artifact name or compile it if not exposing it.
-    // Easier way: Create a small local contract "DevVesting" that inherits from it, or just use the artifact if available.
-    // Let's try deploying it directly from the library artifact if Hardhat exposes it, 
-    // OR just creating a simple file for it is safer.
+    if (process.env.BOT_ADDRESS && process.env.BOT_ADDRESS.startsWith("0x")) {
+        botAddress = process.env.BOT_ADDRESS as `0x${string}`;
+    } else {
+        console.warn("⚠️ AVISO: BOT_ADDRESS não encontrado no .env. Usando o deployer como bot.");
+    }
 
-    // Actually, deploying directly from node_modules artifact in viem can be tricky if not compiled.
-    // Let's assume we need to add a simple contract file for it to be compiled by Hardhat.
+    console.log(`🤖 Endereço do Bot (Minter/Updater): ${botAddress}`);
 
-    // HOLD UP: modifying this script relies on VestingWallet being available. 
-    // I will write the contract file in the next step, then this script will work.
-
-    const vesting = await viem.deployContract("DevVestingWallet", [
-        deployer.account.address, // Beneficiary (You)
-        cleanTimestamp,           // Start (Now)
-        BigInt(duration)          // Duration (2 Years)
+    // 1. Deploy do Token BBX
+    const bbx = await (hre as any).viem.deployContract("BBX", [
+        deployer.account.address,
+        botAddress
     ]);
-    console.log(`VestingWallet deployed to: ${vesting.address}`);
+    console.log(`✅ BBX Token deployado em: ${bbx.address}`);
 
-    // Exclude Vesting Contract from Max Wallet Limit
-    console.log("Excluding VestingWallet from Max Wallet Limit...");
-    await bbx.write.setExcludedFromLimit([vesting.address, true]);
+    // 2. Setup do Vesting
+    const devFundAmount = parseEther("50000000");
+    const currentBlock = await publicClient.getBlock();
+    const cleanTimestamp = currentBlock.timestamp;
+    const duration = BigInt(2 * 365 * 24 * 60 * 60);
 
-    console.log("Minting Dev Fund (5%) to VestingWallet...");
+    console.log("⏳ Deployando VestingWallet...");
+    const vesting = await (hre as any).viem.deployContract("DevVestingWallet", [
+        deployer.account.address,
+        cleanTimestamp,
+        duration
+    ]);
+    console.log(`🏦 Carteira de Vesting: ${vesting.address}`);
+
+    // 3. Excluir Vesting do limite
+    try {
+        console.log("🔓 Excluindo Vesting do Max Wallet Limit...");
+        await bbx.write.setExcludedFromLimit([vesting.address, true]);
+    } catch (e) {
+        console.log("⚠️ Ignorado: setExcludedFromLimit falhou ou não existe.");
+    }
+
+    // 4. MINT DO FUNDO DE DEV 
+    console.log("🛠️ Verificando permissões para Mint inicial...");
+    const MINTER_ROLE = keccak256(toHex("MINTER_ROLE"));
+    const isBotDifferent = botAddress.toLowerCase() !== deployer.account.address.toLowerCase();
+
+    if (isBotDifferent) {
+        console.log("⚠️ Deployer não é o Minter. Concedendo permissão temporária...");
+        await bbx.write.grantRole([MINTER_ROLE, deployer.account.address]);
+    }
+
+    console.log("💸 Mintando 5% para o Vesting...");
     await bbx.write.mint([vesting.address, devFundAmount]);
-    console.log("Dev Fund Minted and Locked.");
-    // ----------------------------
+
+    if (isBotDifferent) {
+        console.log("🔒 Revogando permissão temporária...");
+        await bbx.write.revokeRole([MINTER_ROLE, deployer.account.address]);
+    }
+
+    console.log("----------------------------------------------------");
+    console.log("🎉 DEPLOY FINALIZADO!");
+    console.log(`Token:   ${bbx.address}`);
+    console.log(`Vesting: ${vesting.address}`);
+    console.log("----------------------------------------------------");
 }
 
 main()

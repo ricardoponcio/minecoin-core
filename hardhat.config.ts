@@ -1,6 +1,9 @@
 import hardhatToolboxViemPlugin from "@nomicfoundation/hardhat-toolbox-viem";
 import { defineConfig } from "hardhat/config";
 import "dotenv/config";
+import * as dotenv from "dotenv";
+
+dotenv.config();
 
 export default defineConfig({
   plugins: [hardhatToolboxViemPlugin],
@@ -40,6 +43,12 @@ export default defineConfig({
       url: process.env.ARBITRUM_SEPOLIA_RPC_URL || "https://arbitrum-sepolia.example.com",
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
       chainId: 421614,
+    },
+    amoy: {
+      type: "http",
+      url: "https://rpc-amoy.polygon.technology/",
+      chainId: 80002,
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
     },
   },
 });
