@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BBX Token | Claim Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        polygon: '#8247E5',
+                        polygonDark: '#6422d8',
+                        darkBg: '#0f172a',
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .glow {
+            box-shadow: 0 0 40px -10px #8247E5;
+        }
+
+        .glass-card {
+            background: rgba(30, 41, 59, 0.9);
+            backdrop-filter: blur(16px);
+        }
+    </style>
+</head>
+
+<body class="bg-darkBg text-slate-200 antialiased min-h-screen flex flex-col items-center justify-center relative px-4">
+
+    <div class="absolute top-6 left-6 md:left-12">
+        <a href="index.html"
+            class="flex items-center gap-2 text-slate-400 hover:text-white transition font-semibold text-sm">
+            ← Voltar para Home
+        </a>
+    </div>
+
+    <div
+        class="w-full max-w-md glass-card border border-slate-700 rounded-2xl p-8 shadow-2xl relative overflow-hidden z-10">
+        <div class="absolute -top-20 -right-20 w-40 h-40 bg-polygon rounded-full blur-[80px] opacity-20"></div>
+
+        <div class="text-center mb-8">
+            <svg class="mx-auto mb-4" width="48" height="48" viewBox="0 0 24 24" fill="none"
+                xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="#8247E5" />
+                <path d="M2 17L12 22L22 17V7L12 12L2 7V17Z" fill="#6422d8" />
+                <path d="M2 7L12 12V22L2 17V7Z" fill="#4a15a8" />
+            </svg>
+            <h2 class="text-2xl font-bold text-white mb-1">BBX Claim</h2>
+            <p class="text-slate-400 text-sm">Resgate suas recompensas do servidor</p>
+        </div>
+
+        <div id="accountArea">
+            <button id="connectBtn"
+                class="w-full py-4 bg-polygon hover:bg-polygonDark text-white rounded-xl font-bold text-lg transition shadow-lg glow">
+                CONECTAR CARTEIRA
+            </button>
+        </div>
+
+        <div id="claimArea" class="hidden">
+            <div class="bg-slate-900/80 border-l-4 border-polygon p-4 rounded-lg mb-4 text-left">
+                <span class="text-xs text-slate-500 font-bold tracking-wider block mb-1">CARTEIRA CONECTADA</span>
+                <span id="userAddr" class="font-mono text-sm text-white break-all">0x...</span>
+            </div>
+            <div class="bg-slate-900/80 border-l-4 border-blue-500 p-4 rounded-lg mb-6 text-left">
+                <span class="text-xs text-slate-500 font-bold tracking-wider block mb-1">VALOR PARA RESGATE</span>
+                <span id="displayAmount" class="font-mono text-xl text-polygon font-bold break-all">0.00 BBX</span>
+            </div>
+            <button id="claimBtn"
+                class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-lg transition shadow-lg">
+                REIVINDICAR TOKENS
+            </button>
+        </div>
+
+        <div id="status" class="mt-6 text-center text-sm font-medium min-h-[1.5rem]"></div>
+    </div>
+
+    <script>
+        const CONTRACT_ADDRESS = "0x3463094e2fb6e0067d344502eadefab6283f284f";
+        const EXPECTED_CHAIN_ID = "0x89"; // Polygon Mainnet
+        const ABI = ["function claim(uint256 totalAllocation, bytes32[] calldata proof) public"];
+
+        let provider, signer, contract;
+
+        if (window.ethereum) {
+            window.ethereum.on('accountsChanged', () => window.location.reload());
+            window.ethereum.on('chainChanged', () => window.location.reload());
+        }
+
+        async function connect() {
+            const statusEl = document.getElementById('status');
+
+            if (!window.ethereum) {
+                statusEl.innerHTML = '<span class="text-red-400">Instale a MetaMask para continuar.</span>';
+                return;
+            }
+
+            try {
+                const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+                if (chainId !== EXPECTED_CHAIN_ID) {
+                    await window.ethereum.request({
+                        method: 'wallet_switchEthereumChain',
+                        params: [{ chainId: EXPECTED_CHAIN_ID }],
+                    });
+                }
+
+                provider = new ethers.BrowserProvider(window.ethereum);
+                const accounts = await provider.send("eth_requestAccounts", []);
+                signer = await provider.getSigner();
+                contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+
+                const urlParams = new URLSearchParams(window.location.search);
+                const amount = urlParams.get('amount');
+
+                if (amount) {
+                    document.getElementById('displayAmount').innerText = ethers.formatEther(amount) + " BBX";
+                }
+
+                document.getElementById('userAddr').innerText = accounts[0];
+                document.getElementById('accountArea').classList.add('hidden');
+                document.getElementById('claimArea').classList.remove('hidden');
+                statusEl.innerHTML = '<span class="text-green-400">Pronto para o resgate.</span>';
+
+            } catch (err) {
+                statusEl.innerHTML = '<span class="text-red-400">Falha ao conectar à rede Polygon.</span>';
+            }
+        }
+
+        async function executeClaim() {
+            const statusEl = document.getElementById('status');
+            const claimBtn = document.getElementById('claimBtn');
+            const urlParams = new URLSearchParams(window.location.search);
+            const amount = urlParams.get('amount');
+            const proofStr = urlParams.get('proof');
+
+            if (!amount || !proofStr) {
+                statusEl.innerHTML = '<span class="text-red-400 font-bold">Aviso: Sem dados de saque. Acesse através do link gerado no servidor.</span>';
+                return;
+            }
+
+            const proof = proofStr.split(',');
+
+            try {
+                claimBtn.disabled = true;
+                claimBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                statusEl.innerHTML = '<span class="text-yellow-400 animate-pulse">Confirme a transação na MetaMask...</span>';
+
+                const tx = await contract.claim(BigInt(amount), proof);
+                statusEl.innerHTML = '<span class="text-blue-400 animate-pulse">Processando na Blockchain. Aguarde...</span>';
+
+                await tx.wait();
+                statusEl.innerHTML = '<span class="text-green-400 font-bold">✅ Tokens resgatados com sucesso!</span>';
+            } catch (err) {
+                console.error(err);
+                let erroMsg = err.reason || "Transação falhou.";
+                if (erroMsg.includes("NothingToClaim")) erroMsg = "Você já resgatou estes tokens.";
+
+                statusEl.innerHTML = `<span class="text-red-400">Erro: ${erroMsg}</span>`;
+                claimBtn.disabled = false;
+                claimBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        }
+
+        document.getElementById('connectBtn').onclick = connect;
+        document.getElementById('claimBtn').onclick = executeClaim;
+    </script>
+</body>
+
+</html>

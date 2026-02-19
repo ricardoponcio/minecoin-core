@@ -4,11 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BBX Token | Claim Portal</title>
+    <title>BBX Token | A Economia L2 do Minecraft</title>
     <meta name="description"
         content="O token oficial da nossa economia descentralizada no Minecraft, rodando na Polygon Mainnet.">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -32,11 +31,6 @@
         .glow {
             box-shadow: 0 0 40px -10px #8247E5;
         }
-
-        .glass-card {
-            background: rgba(30, 41, 59, 0.7);
-            backdrop-filter: blur(10px);
-        }
     </style>
 </head>
 
@@ -52,14 +46,14 @@
             <span class="text-polygon">BBX</span> Core
         </div>
         <div class="hidden md:flex gap-6 text-sm font-semibold text-slate-400">
-            <a href="#claim-portal" class="hover:text-white transition">Claim</a>
+            <a href="claim.html" class="text-white hover:text-polygon transition">Claim Portal</a>
             <a href="#tokenomics" class="hover:text-white transition">Tokenomics</a>
             <a href="#seguranca" class="hover:text-white transition">Segurança</a>
             <a href="https://t.me/bbxcoinbot" target="_blank" class="hover:text-[#229ED9] transition">Telegram Bot</a>
         </div>
     </nav>
 
-    <main class="container mx-auto px-6 pt-16 pb-24 text-center">
+    <main class="container mx-auto px-6 pt-20 pb-24 text-center">
         <div
             class="inline-block mb-4 px-4 py-1.5 rounded-full border border-polygon/30 bg-polygon/10 text-polygon text-sm font-semibold">
             🚀 Live on Polygon Mainnet
@@ -68,40 +62,20 @@
             A Economia L2 do <br />
             <span class="text-transparent bg-clip-text bg-gradient-to-r from-polygon to-blue-500">Minecraft</span>
         </h1>
-        <p class="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-12 leading-relaxed">
-            Minere no jogo, faça o claim na blockchain.
+        <p class="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
+            Minere no jogo, faça o claim na blockchain. O BBX é um token ERC-20 desenhado para integrar a economia
+            interna do servidor com a Web3.
         </p>
 
-        <div id="claim-portal"
-            class="max-w-md mx-auto glass-card border border-slate-700 rounded-2xl p-8 shadow-2xl relative overflow-hidden">
-            <div class="absolute -top-20 -right-20 w-40 h-40 bg-polygon rounded-full blur-[80px] opacity-20"></div>
-
-            <h2 class="text-2xl font-bold text-white mb-2">Portal de Claim</h2>
-            <p class="text-slate-400 text-sm mb-8">Resgate suas recompensas do servidor</p>
-
-            <div id="accountArea">
-                <button id="connectBtn"
-                    class="w-full py-4 bg-polygon hover:bg-polygonDark text-white rounded-xl font-bold text-lg transition shadow-lg glow">
-                    CONECTAR CARTEIRA
-                </button>
-            </div>
-
-            <div id="claimArea" class="hidden">
-                <div class="bg-slate-900/80 border-l-4 border-polygon p-4 rounded-lg mb-4 text-left">
-                    <span class="text-xs text-slate-500 font-bold tracking-wider block mb-1">CARTEIRA CONECTADA</span>
-                    <span id="userAddr" class="font-mono text-sm text-white break-all">0x...</span>
-                </div>
-                <div class="bg-slate-900/80 border-l-4 border-blue-500 p-4 rounded-lg mb-6 text-left">
-                    <span class="text-xs text-slate-500 font-bold tracking-wider block mb-1">VALOR PARA RESGATE</span>
-                    <span id="displayAmount" class="font-mono text-lg text-polygon font-bold break-all">0.00 BBX</span>
-                </div>
-                <button id="claimBtn"
-                    class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-lg transition shadow-lg">
-                    REIVINDICAR TOKENS
-                </button>
-            </div>
-
-            <div id="status" class="mt-4 text-sm font-medium min-h-[1.5rem]"></div>
+        <div class="flex flex-col sm:flex-row justify-center items-center gap-4">
+            <a href="/claim/"
+                class="w-full sm:w-auto px-8 py-4 bg-polygon hover:bg-polygonDark text-white rounded-lg font-bold text-lg transition shadow-lg glow">
+                Acessar Portal de Claim
+            </a>
+            <a href="https://github.com/ricardoponcio/minecoin-core" target="_blank"
+                class="w-full sm:w-auto px-8 py-4 bg-cardBg hover:bg-slate-700 text-white rounded-lg font-bold text-lg transition border border-slate-700">
+                Ver no GitHub
+            </a>
         </div>
 
         <div
@@ -113,7 +87,7 @@
                     0x3463094e2fb6e0067d344502eadefab6283f284f</p>
             </div>
             <div class="flex gap-2">
-                <button onclick="copyContract()"
+                <button onclick="copyContract(event)"
                     class="p-2 px-4 bg-slate-800 hover:bg-slate-700 text-white rounded border border-slate-600 transition"
                     title="Copiar">
                     Copiar
@@ -162,20 +136,17 @@
                 <div class="flex-1">
                     <h2 class="text-3xl font-bold text-white mb-6">Segurança & Gestão In-Game</h2>
                     <p class="text-slate-400 leading-relaxed mb-6">
-                        O ecossistema BBX foi desenhado com o conceito de <strong>Idempotência</strong>. Isso significa
-                        que o contrato inteligente calcula o saldo líquido dinamicamente. É matematicamente impossível
-                        ocorrer um "Double Spend" (gastar no jogo o que já foi sacado na blockchain).
+                        O ecossistema BBX foi desenhado com o conceito de <strong>Idempotência</strong>. É
+                        matematicamente impossível ocorrer um "Double Spend" (gastar no jogo o que já foi sacado na
+                        blockchain).
                     </p>
                     <ul class="space-y-4 mb-8">
-                        <li class="flex items-center gap-3 text-slate-300">
-                            <span class="text-polygon">✓</span> Contratos auditáveis na Polygonscan
-                        </li>
-                        <li class="flex items-center gap-3 text-slate-300">
-                            <span class="text-polygon">✓</span> Controle de Rate Limit (10% mint diário)
-                        </li>
-                        <li class="flex items-center gap-3 text-slate-300">
-                            <span class="text-polygon">✓</span> Gestão via Telegram Bot
-                        </li>
+                        <li class="flex items-center gap-3 text-slate-300"><span class="text-polygon">✓</span> Contratos
+                            auditáveis na Polygonscan</li>
+                        <li class="flex items-center gap-3 text-slate-300"><span class="text-polygon">✓</span> Controle
+                            de Rate Limit (10% mint diário)</li>
+                        <li class="flex items-center gap-3 text-slate-300"><span class="text-polygon">✓</span> Gestão
+                            via Telegram Bot</li>
                     </ul>
                     <a href="https://t.me/bbxcoinbot" target="_blank"
                         class="inline-flex items-center gap-2 px-6 py-3 bg-[#229ED9] hover:bg-[#1c84b5] text-white rounded-lg font-bold transition">
@@ -202,8 +173,7 @@
     </footer>
 
     <script>
-        // Funcionalidade de Copiar
-        function copyContract() {
+        function copyContract(event) {
             const address = document.getElementById("contractAddress").innerText;
             navigator.clipboard.writeText(address).then(() => {
                 const btn = event.currentTarget;
@@ -216,98 +186,6 @@
                 }, 2000);
             });
         }
-
-        // --- LÓGICA WEB3 ETHERS.JS ---
-        const CONTRACT_ADDRESS = "0x3463094e2fb6e0067d344502eadefab6283f284f";
-        const EXPECTED_CHAIN_ID = "0x89"; // Polygon Mainnet (137)
-        const ABI = ["function claim(uint256 totalAllocation, bytes32[] calldata proof) public"];
-
-        let provider, signer, contract;
-
-        if (window.ethereum) {
-            window.ethereum.on('accountsChanged', () => window.location.reload());
-            window.ethereum.on('chainChanged', () => window.location.reload());
-        }
-
-        async function connect() {
-            const statusEl = document.getElementById('status');
-
-            if (!window.ethereum) {
-                statusEl.innerHTML = '<span class="text-red-400">Instale a MetaMask ou carteira Web3!</span>';
-                return;
-            }
-
-            try {
-                // Força troca de rede se estiver errado
-                const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-                if (chainId !== EXPECTED_CHAIN_ID) {
-                    await window.ethereum.request({
-                        method: 'wallet_switchEthereumChain',
-                        params: [{ chainId: EXPECTED_CHAIN_ID }],
-                    });
-                }
-
-                provider = new ethers.BrowserProvider(window.ethereum);
-                const accounts = await provider.send("eth_requestAccounts", []);
-                signer = await provider.getSigner();
-                contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
-
-                // Pegar valores da URL
-                const urlParams = new URLSearchParams(window.location.search);
-                const amount = urlParams.get('amount');
-
-                if (amount) {
-                    document.getElementById('displayAmount').innerText = ethers.formatEther(amount) + " BBX";
-                }
-
-                // UI Updates
-                document.getElementById('userAddr').innerText = accounts[0];
-                document.getElementById('accountArea').classList.add('hidden');
-                document.getElementById('claimArea').classList.remove('hidden');
-                statusEl.innerHTML = '<span class="text-green-400">Conectado! Pronto para o resgate.</span>';
-
-            } catch (err) {
-                statusEl.innerHTML = '<span class="text-red-400">Falha ao conectar à rede Polygon.</span>';
-            }
-        }
-
-        async function executeClaim() {
-            const statusEl = document.getElementById('status');
-            const claimBtn = document.getElementById('claimBtn');
-            const urlParams = new URLSearchParams(window.location.search);
-            const amount = urlParams.get('amount');
-            const proofStr = urlParams.get('proof');
-
-            if (!amount || !proofStr) {
-                statusEl.innerHTML = '<span class="text-red-400">Aviso: Sem dados de saque na URL. Abra o link gerado no jogo.</span>';
-                return;
-            }
-
-            const proof = proofStr.split(',');
-
-            try {
-                claimBtn.disabled = true;
-                claimBtn.classList.add('opacity-50', 'cursor-not-allowed');
-                statusEl.innerHTML = '<span class="text-yellow-400 animate-pulse">Confirme a transação na sua carteira...</span>';
-
-                const tx = await contract.claim(BigInt(amount), proof);
-                statusEl.innerHTML = '<span class="text-blue-400 animate-pulse">Processando na Blockchain. Aguarde...</span>';
-
-                await tx.wait();
-                statusEl.innerHTML = '<span class="text-green-400 font-bold">✅ Tokens resgatados com sucesso!</span>';
-            } catch (err) {
-                console.error(err);
-                let erroMsg = err.reason || "Transação falhou ou foi rejeitada.";
-                if (erroMsg.includes("NothingToClaim")) erroMsg = "Você já resgatou estes tokens.";
-
-                statusEl.innerHTML = `<span class="text-red-400">Erro: ${erroMsg}</span>`;
-                claimBtn.disabled = false;
-                claimBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-            }
-        }
-
-        document.getElementById('connectBtn').onclick = connect;
-        document.getElementById('claimBtn').onclick = executeClaim;
     </script>
 </body>
 
