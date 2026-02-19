@@ -20,10 +20,21 @@ const config: HardhatUserConfig = {
       chainId: 80002,
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
     },
+    polygon: {
+      url: process.env.POLYGON_MAINNET_RPC || "",
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+      chainId: 137,
+      gasPrice: "auto"
+    },
     hardhat: {
       chainId: 1337,
-    }
+    },
   },
+  etherscan: {
+    apiKey: {
+      polygon: process.env.POLYGONSCAN_API_KEY || "",
+    }
+  }
 };
 
 export default config;
