@@ -30,6 +30,7 @@ contract BBX is
 
     event MerkleRootUpdated(bytes32 indexed newRoot);
     event Claimed(address indexed user, uint256 amount);
+    event DepositedToGame(address indexed playerWallet, uint256 amount);
 
     // --- Mint Limiter State ---
     uint256 public mintCapPerPeriod; // Max amount allowed to mint per period
@@ -40,6 +41,8 @@ contract BBX is
     // --- Anti-Whale State ---
     uint256 public maxWalletSize; // 3% of Total Cap
     mapping(address => bool) public isExcludedFromLimit; // Whitelist
+
+    address public treasuryAddress;
 
     error MintLimitExceeded(uint256 requested, uint256 available);
     error MaxWalletExceeded(uint256 balance, uint256 limit);
@@ -71,6 +74,8 @@ contract BBX is
         isExcludedFromLimit[defaultAdmin] = true;
         isExcludedFromLimit[minter] = true;
         isExcludedFromLimit[address(this)] = true;
+
+        treasuryAddress = defaultAdmin;
     }
 
     function setExcludedFromLimit(
@@ -156,6 +161,20 @@ contract BBX is
                 _mint(user, toMint);
             }
         }
+    }
+
+    // --- Deposit Bridge Logic ---
+
+    function setTreasuryAddress(
+        address newTreasury
+    ) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        treasuryAddress = newTreasury;
+    }
+
+    function depositToGame(uint256 amount) public {
+        require(amount > 0, "Amount must be > 0");
+        _transfer(msg.sender, treasuryAddress, amount);
+        emit DepositedToGame(msg.sender, amount);
     }
 
     // The following functions are overrides required by Solidity.

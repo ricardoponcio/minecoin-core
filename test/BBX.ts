@@ -1,4 +1,3 @@
-import { describe, it } from "node:test";
 import { expect } from "chai";
 import hre from "hardhat";
 import { getAddress, parseEther } from "viem";
@@ -86,6 +85,94 @@ describe("BBX", function () {
                 errorThrown = true;
             }
             expect(errorThrown).to.be.true;
+        });
+    });
+
+    describe("Deposit Bridge", function () {
+        it("Should set initial treasury address correctly", async function () {
+            const { bbx, owner } = await deployBBXFixture();
+            expect(await bbx.read.treasuryAddress()).to.equal(getAddress(owner.account.address));
+        });
+
+        it("Should allow admin to set new treasury address", async function () {
+            const { bbx, owner, otherAccount } = await deployBBXFixture();
+
+            await bbx.write.setTreasuryAddress([otherAccount.account.address]);
+            expect(await bbx.read.treasuryAddress()).to.equal(getAddress(otherAccount.account.address));
+        });
+
+        it("Should prevent non-admin from setting treasury address", async function () {
+            const { bbx, otherAccount } = await deployBBXFixture();
+
+            let errorThrown = false;
+            try {
+                // Connect as otherAccount
+                const bbxAsOther = await hre.viem.getContractAt("BBX", bbx.address, { client: { wallet: otherAccount } });
+                await bbxAsOther.write.setTreasuryAddress([otherAccount.account.address]);
+            } catch (error: any) {
+                errorThrown = true;
+            }
+            expect(errorThrown).to.be.true;
+        });
+
+        it("Should allow users to deposit tokens", async function () {
+            const { bbx, owner, otherAccount, publicClient } = await deployBBXFixture();
+            const depositAmount = parseEther("50");
+
+            // Mint to otherAccount first
+            await bbx.write.mint([otherAccount.account.address, parseEther("100")]);
+
+            // Connect as otherAccount
+            const bbxAsOther = await hre.viem.getContractAt("BBX", bbx.address, { client: { wallet: otherAccount } });
+
+            // Deposit
+            const hash = await bbxAsOther.write.depositToGame([depositAmount]);
+
+            // Verify balances
+            expect(await bbx.read.balanceOf([otherAccount.account.address])).to.equal(parseEther("50")); // 100 - 50
+            expect(await bbx.read.balanceOf([owner.account.address])).to.equal(depositAmount); // Treasury (owner) received 50
+
+            // Verify event
+            const receipt = await publicClient.waitForTransactionReceipt({ hash });
+            const logs = await publicClient.getContractEvents({
+                abi: bbx.abi,
+                address: bbx.address,
+                eventName: 'DepositedToGame',
+                fromBlock: receipt.blockNumber,
+                toBlock: receipt.blockNumber
+            });
+
+            expect(logs.length).to.equal(1);
+            expect(getAddress(logs[0].args.playerWallet!)).to.equal(getAddress(otherAccount.account.address));
+            expect(logs[0].args.amount).to.equal(depositAmount);
+        });
+
+        it("Should fail if deposit amount is 0", async function () {
+            const { bbx, otherAccount } = await deployBBXFixture();
+            const bbxAsOther = await hre.viem.getContractAt("BBX", bbx.address, { client: { wallet: otherAccount } });
+
+            let errorThrown = false;
+            try {
+                await bbxAsOther.write.depositToGame([0n]);
+            } catch (error: any) {
+                errorThrown = true;
+                expect(error.message).to.include("Amount must be > 0");
+            }
+            expect(errorThrown).to.be.true;
+        });
+
+        it("Should fail if user has insufficient balance", async function () {
+             const { bbx, otherAccount } = await deployBBXFixture();
+             const bbxAsOther = await hre.viem.getContractAt("BBX", bbx.address, { client: { wallet: otherAccount } });
+
+             // otherAccount has 0 balance
+             let errorThrown = false;
+             try {
+                 await bbxAsOther.write.depositToGame([parseEther("10")]);
+             } catch (error: any) {
+                 errorThrown = true;
+             }
+             expect(errorThrown).to.be.true;
         });
     });
 });
