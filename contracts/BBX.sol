@@ -25,11 +25,12 @@ contract BBX is
         keccak256("MERKLE_UPDATER_ROLE");
 
     // --- Merkle Drop State ---
-    bytes32 public merkleRoot;
-    mapping(address => uint256) public claimedAmount;
+    mapping(uint256 => bytes32) public merkleRoots;
+    mapping(uint256 => mapping(address => uint256)) public claimedAmount;
 
-    event MerkleRootUpdated(bytes32 indexed newRoot);
-    event Claimed(address indexed user, uint256 amount);
+    event MerkleRootUpdated(uint256 indexed appId, bytes32 indexed newRoot);
+    event Claimed(uint256 indexed appId, address indexed user, uint256 amount);
+    event DepositedToGame(uint256 indexed appId, address indexed playerWallet, uint256 amount);
 
     // --- Mint Limiter State ---
     uint256 public mintCapPerPeriod; // Max amount allowed to mint per period
@@ -40,6 +41,8 @@ contract BBX is
     // --- Anti-Whale State ---
     uint256 public maxWalletSize; // 3% of Total Cap
     mapping(address => bool) public isExcludedFromLimit; // Whitelist
+
+    address public treasuryAddress;
 
     error MintLimitExceeded(uint256 requested, uint256 available);
     error MaxWalletExceeded(uint256 balance, uint256 limit);
@@ -71,6 +74,8 @@ contract BBX is
         isExcludedFromLimit[defaultAdmin] = true;
         isExcludedFromLimit[minter] = true;
         isExcludedFromLimit[address(this)] = true;
+
+        treasuryAddress = defaultAdmin;
     }
 
     function setExcludedFromLimit(
@@ -109,27 +114,28 @@ contract BBX is
     // --- Merkle Drop Logic ---
 
     function updateMerkleRoot(
+        uint256 appId,
         bytes32 _merkleRoot
     ) public onlyRole(MERKLE_UPDATER_ROLE) {
-        merkleRoot = _merkleRoot;
-        emit MerkleRootUpdated(_merkleRoot);
+        merkleRoots[appId] = _merkleRoot;
+        emit MerkleRootUpdated(appId, _merkleRoot);
     }
 
-    function claim(uint256 totalAllocation, bytes32[] calldata proof) public {
-        if (totalAllocation <= claimedAmount[msg.sender]) {
+    function claim(uint256 appId, uint256 totalAllocation, bytes32[] calldata proof) public {
+        if (totalAllocation <= claimedAmount[appId][msg.sender]) {
             revert NothingToClaim();
         }
 
         bytes32 leaf = keccak256(abi.encodePacked(msg.sender, totalAllocation));
-        if (!MerkleProof.verify(proof, merkleRoot, leaf)) {
+        if (!MerkleProof.verify(proof, merkleRoots[appId], leaf)) {
             revert InvalidProof();
         }
 
-        uint256 toMint = totalAllocation - claimedAmount[msg.sender];
-        claimedAmount[msg.sender] = totalAllocation;
+        uint256 toMint = totalAllocation - claimedAmount[appId][msg.sender];
+        claimedAmount[appId][msg.sender] = totalAllocation;
 
         _mint(msg.sender, toMint);
-        emit Claimed(msg.sender, toMint);
+        emit Claimed(appId, msg.sender, toMint);
     }
 
     /**
@@ -138,6 +144,7 @@ contract BBX is
      * Evita pagamentos duplicados (Idempotência).
      */
     function batchMint(
+        uint256 appId,
         address[] calldata recipients,
         uint256[] calldata totalAllocations
     ) external onlyRole(MINTER_ROLE) {
@@ -150,12 +157,26 @@ contract BBX is
             address user = recipients[i];
             uint256 total = totalAllocations[i];
 
-            if (total > claimedAmount[user]) {
-                uint256 toMint = total - claimedAmount[user];
-                claimedAmount[user] = total;
+            if (total > claimedAmount[appId][user]) {
+                uint256 toMint = total - claimedAmount[appId][user];
+                claimedAmount[appId][user] = total;
                 _mint(user, toMint);
             }
         }
+    }
+
+    // --- Deposit Bridge Logic ---
+
+    function setTreasuryAddress(
+        address newTreasury
+    ) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        treasuryAddress = newTreasury;
+    }
+
+    function depositToGame(uint256 appId, uint256 amount) public {
+        require(amount > 0, "Amount must be > 0");
+        _transfer(msg.sender, treasuryAddress, amount);
+        emit DepositedToGame(appId, msg.sender, amount);
     }
 
     // The following functions are overrides required by Solidity.
