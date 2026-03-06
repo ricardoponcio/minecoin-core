@@ -29,9 +29,7 @@ async function main() {
     const bbx = await (hre as any).viem.deployContract("BBX", [
         deployer.account.address,
         botAddress
-    ], {
-        gasPrice: 100000000000n,
-    });
+    ]);
     console.log(`✅ BBX Token deployado em: ${bbx.address}`);
 
     // 2. Setup do Vesting
