@@ -228,6 +228,7 @@ describe("BBX", function () {
         it("Should allow users to deposit tokens", async function () {
             const { bbx, owner, otherAccount, publicClient } = await deployBBXFixture();
             const depositAmount = parseEther("50");
+            const appId = 1n;
 
             // Mint to otherAccount first
             await bbx.write.mint([otherAccount.account.address, parseEther("100")]);
@@ -236,7 +237,7 @@ describe("BBX", function () {
             const bbxAsOther = await hre.viem.getContractAt("BBX", bbx.address, { client: { wallet: otherAccount } });
 
             // Deposit
-            const hash = await bbxAsOther.write.depositToGame([depositAmount]);
+            const hash = await bbxAsOther.write.depositToGame([appId, depositAmount]);
 
             // Verify balances
             expect(await bbx.read.balanceOf([otherAccount.account.address])).to.equal(parseEther("50")); // 100 - 50
@@ -253,6 +254,7 @@ describe("BBX", function () {
             });
 
             expect(logs.length).to.equal(1);
+            expect(logs[0].args.appId).to.equal(appId);
             expect(getAddress(logs[0].args.playerWallet!)).to.equal(getAddress(otherAccount.account.address));
             expect(logs[0].args.amount).to.equal(depositAmount);
         });
@@ -260,10 +262,11 @@ describe("BBX", function () {
         it("Should fail if deposit amount is 0", async function () {
             const { bbx, otherAccount } = await deployBBXFixture();
             const bbxAsOther = await hre.viem.getContractAt("BBX", bbx.address, { client: { wallet: otherAccount } });
+            const appId = 1n;
 
             let errorThrown = false;
             try {
-                await bbxAsOther.write.depositToGame([0n]);
+                await bbxAsOther.write.depositToGame([appId, 0n]);
             } catch (error: any) {
                 errorThrown = true;
                 expect(error.message).to.include("Amount must be > 0");
@@ -274,11 +277,12 @@ describe("BBX", function () {
         it("Should fail if user has insufficient balance", async function () {
              const { bbx, otherAccount } = await deployBBXFixture();
              const bbxAsOther = await hre.viem.getContractAt("BBX", bbx.address, { client: { wallet: otherAccount } });
+             const appId = 1n;
 
              // otherAccount has 0 balance
              let errorThrown = false;
              try {
-                 await bbxAsOther.write.depositToGame([parseEther("10")]);
+                 await bbxAsOther.write.depositToGame([appId, parseEther("10")]);
              } catch (error: any) {
                  errorThrown = true;
              }

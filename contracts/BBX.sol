@@ -30,7 +30,7 @@ contract BBX is
 
     event MerkleRootUpdated(uint256 indexed appId, bytes32 indexed newRoot);
     event Claimed(uint256 indexed appId, address indexed user, uint256 amount);
-    event DepositedToGame(address indexed playerWallet, uint256 amount);
+    event DepositedToGame(uint256 indexed appId, address indexed playerWallet, uint256 amount);
 
     // --- Mint Limiter State ---
     uint256 public mintCapPerPeriod; // Max amount allowed to mint per period
@@ -173,10 +173,10 @@ contract BBX is
         treasuryAddress = newTreasury;
     }
 
-    function depositToGame(uint256 amount) public {
+    function depositToGame(uint256 appId, uint256 amount) public {
         require(amount > 0, "Amount must be > 0");
         _transfer(msg.sender, treasuryAddress, amount);
-        emit DepositedToGame(msg.sender, amount);
+        emit DepositedToGame(appId, msg.sender, amount);
     }
 
     // The following functions are overrides required by Solidity.
