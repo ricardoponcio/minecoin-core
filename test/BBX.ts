@@ -199,39 +199,16 @@ describe("BBX", function () {
     });
 
     describe("Deposit Bridge", function () {
-        it("Should set initial treasury address correctly", async function () {
-            const { bbx, owner } = await deployBBXFixture();
-            expect(await bbx.read.treasuryAddress()).to.equal(getAddress(owner.account.address));
-        });
-
-        it("Should allow admin to set new treasury address", async function () {
-            const { bbx, owner, otherAccount } = await deployBBXFixture();
-
-            await bbx.write.setTreasuryAddress([otherAccount.account.address]);
-            expect(await bbx.read.treasuryAddress()).to.equal(getAddress(otherAccount.account.address));
-        });
-
-        it("Should prevent non-admin from setting treasury address", async function () {
-            const { bbx, otherAccount } = await deployBBXFixture();
-
-            let errorThrown = false;
-            try {
-                // Connect as otherAccount
-                const bbxAsOther = await hre.viem.getContractAt("BBX", bbx.address, { client: { wallet: otherAccount } });
-                await bbxAsOther.write.setTreasuryAddress([otherAccount.account.address]);
-            } catch (error: any) {
-                errorThrown = true;
-            }
-            expect(errorThrown).to.be.true;
-        });
-
-        it("Should allow users to deposit tokens", async function () {
+        it("Should allow users to deposit tokens and burn them", async function () {
             const { bbx, owner, otherAccount, publicClient } = await deployBBXFixture();
             const depositAmount = parseEther("50");
             const appId = 1n;
 
             // Mint to otherAccount first
             await bbx.write.mint([otherAccount.account.address, parseEther("100")]);
+
+            // Track initial total supply
+            const initialTotalSupply = await bbx.read.totalSupply();
 
             // Connect as otherAccount
             const bbxAsOther = await hre.viem.getContractAt("BBX", bbx.address, { client: { wallet: otherAccount } });
@@ -241,7 +218,10 @@ describe("BBX", function () {
 
             // Verify balances
             expect(await bbx.read.balanceOf([otherAccount.account.address])).to.equal(parseEther("50")); // 100 - 50
-            expect(await bbx.read.balanceOf([owner.account.address])).to.equal(depositAmount); // Treasury (owner) received 50
+
+            // Verify total supply decreased
+            const finalTotalSupply = await bbx.read.totalSupply();
+            expect(finalTotalSupply).to.equal(initialTotalSupply - depositAmount);
 
             // Verify event
             const receipt = await publicClient.waitForTransactionReceipt({ hash });
