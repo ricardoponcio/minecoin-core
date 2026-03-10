@@ -167,6 +167,14 @@
         }
 
         async function executeDeposit() {
+            // 0x13882 é o ID da Amoy. 0x89 é o da Polygon Mainnet.
+            const expectedChainId = '0x13882';
+            const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
+            if (currentChainId !== expectedChainId) {
+                showStatus("⚠️ Erro: Você está na rede errada! Mude para a Amoy Testnet na MetaMask.", true);
+                return;
+            }
+
             const appId = document.getElementById('appId').value;
             const amountInput = document.getElementById('amount').value;
             const btn = document.getElementById('depositBtn');
