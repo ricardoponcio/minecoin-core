@@ -1,4 +1,4 @@
-# MineCoin (BBX) Core
+# MineCrypto (BBX) Core Contract
 
 Smart contracts and scripts for the Minecraft L2 Economy Integration.
 
