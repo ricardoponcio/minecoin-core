@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BBX Portal - Depósito</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #121212;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .card {
+            background: #1e1e1e;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            border: 1px solid #333;
+        }
+
+        h1 {
+            color: #f3ba2f;
+            margin-bottom: 0.5rem;
+        }
+
+        p {
+            color: #aaa;
+            font-size: 0.9rem;
+        }
+
+        .input-group {
+            margin: 1.5rem 0;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #ddd;
+            font-weight: bold;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #444;
+            background: #2a2a2a;
+            color: white;
+            box-sizing: border-box;
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+            margin-top: 10px;
+        }
+
+        .btn-connect {
+            background: #333;
+            color: white;
+        }
+
+        .btn-deposit {
+            background: #f3ba2f;
+            color: #000;
+            display: none;
+        }
+
+        .btn-deposit:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+
+        .status {
+            margin-top: 1rem;
+            font-size: 0.85rem;
+            padding: 10px;
+            border-radius: 5px;
+            display: none;
+        }
+
+        .success {
+            background: rgba(0, 255, 0, 0.1);
+            color: #00ff00;
+            border: 1px solid #00ff00;
+        }
+
+        .error {
+            background: rgba(255, 0, 0, 0.1);
+            color: #ff4444;
+            border: 1px solid #ff4444;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="card">
+        <h1>🔥 BBX Deposit</h1>
+        <p>Os tokens depositados serão queimados e creditados no jogo.</p>
+
+        <button id="connectBtn" class="btn-connect" onclick="connectWallet()">Conectar Carteira</button>
+
+        <div id="depositForm" style="display:none;">
+            <div class="input-group">
+                <label>Selecione o Servidor</label>
+                <select id="appId">
+                    <option value="11001">Minecraft</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label>Quantidade (BBX)</label>
+                <input type="number" id="amount" placeholder="Ex: 100" min="1">
+            </div>
+
+            <button id="depositBtn" class="btn-deposit" onclick="executeDeposit()">Confirmar Depósito</button>
+        </div>
+
+        <div id="statusBox" class="status"></div>
+    </div>
+
+    <script>
+        // Configurações do seu novo contrato na Mainnet
+        const CONTRACT_ADDRESS = "0xF4E058B763f3b7F1A3d4E84ABf6b30b51F450724";
+        const ABI = [
+            "function depositToGame(uint256 appId, uint256 amount) public",
+            "function balanceOf(address owner) view returns (uint256)"
+        ];
+
+        let provider, signer, contract;
+
+        async function connectWallet() {
+            if (!window.ethereum) return alert("Instale a MetaMask!");
+
+            try {
+                provider = new ethers.BrowserProvider(window.ethereum);
+                await provider.send("eth_requestAccounts", []);
+                signer = await provider.getSigner();
+                contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+
+                document.getElementById('connectBtn').innerText = "Conectado: " + (await signer.getAddress()).substring(0, 6) + "...";
+                document.getElementById('depositForm').style.display = "block";
+                document.getElementById('depositBtn').style.display = "block";
+            } catch (err) {
+                console.error(err);
+                showStatus("Erro ao conectar carteira", true);
+            }
+        }
+
+        async function executeDeposit() {
+            const appId = document.getElementById('appId').value;
+            const amountInput = document.getElementById('amount').value;
+            const btn = document.getElementById('depositBtn');
+
+            if (!amountInput || amountInput <= 0) return showStatus("Digite um valor válido", true);
+
+            try {
+                btn.disabled = true;
+                btn.innerText = "Processando...";
+                showStatus("Aguardando confirmação na MetaMask...");
+
+                const amountWei = ethers.parseEther(amountInput);
+
+                // Chama a função de Burn direto
+                const tx = await contract.depositToGame(appId, amountWei);
+
+                showStatus("Transação enviada! Aguardando rede Polygon...");
+                await tx.wait();
+
+                showStatus("✅ Sucesso! Seus tokens foram queimados. O saldo cairá no jogo em instantes.", false);
+                document.getElementById('amount').value = "";
+            } catch (err) {
+                console.error(err);
+                showStatus("Erro na transação: " + (err.reason || "Rejeitado"), true);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Confirmar Depósito";
+            }
+        }
+
+        function showStatus(msg, isError = false) {
+            const box = document.getElementById('statusBox');
+            box.style.display = "block";
+            box.innerText = msg;
+            box.className = isError ? "status error" : "status success";
+        }
+    </script>
+
+</body>
+
+</html>
