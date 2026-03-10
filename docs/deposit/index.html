@@ -140,7 +140,7 @@
 
     <script>
         // Configurações do seu novo contrato na Mainnet
-        const CONTRACT_ADDRESS = "0xF4E058B763f3b7F1A3d4E84ABf6b30b51F450724";
+        const CONTRACT_ADDRESS = "0xffad8cd28834cb9611b4601513bea1cad0e2dc80";
         const ABI = [
             "function depositToGame(uint256 appId, uint256 amount) public",
             "function balanceOf(address owner) view returns (uint256)"
@@ -168,7 +168,7 @@
 
         async function executeDeposit() {
             // 0x13882 é o ID da Amoy. 0x89 é o da Polygon Mainnet.
-            const expectedChainId = '0x13882';
+            const expectedChainId = '0x89';
             const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
             if (currentChainId !== expectedChainId) {
                 showStatus("⚠️ Erro: Você está na rede errada! Mude para a Amoy Testnet na MetaMask.", true);
